@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:awais_blog/models/upload_task.dart';
 import 'package:awais_blog/providers/post_provider.dart';
+import 'package:awais_blog/providers/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -36,10 +37,33 @@ class _PostDetailState extends State<PostDetail> {
   void initState() {
     super.initState();
     _loadPost();
-    context.read<CommentProvider>().fetchComments(widget.postId);
+    final commentProvider = context.read<CommentProvider>();
+    commentProvider.clearComments(); // Clear stale comments
+    commentProvider.fetchComments(widget.postId);
+    
+    // Add listener for errors
+    commentProvider.addListener(_onCommentError);
+
     final auth = context.read<AuthProvider>();
     if (auth.user != null) {
       context.read<ProfileProvider>().loadProfile(auth.user!.id);
+    }
+  }
+
+  void _onCommentError() {
+    final error = context.read<CommentProvider>().error;
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Clear',
+            textColor: Colors.white,
+            onPressed: () => context.read<CommentProvider>().clearError(),
+          ),
+        ),
+      );
     }
   }
 
@@ -73,6 +97,7 @@ class _PostDetailState extends State<PostDetail> {
 
   @override
   void dispose() {
+    context.read<CommentProvider>().removeListener(_onCommentError);
     _pageController.dispose();
     super.dispose();
   }
@@ -480,6 +505,10 @@ class _CommentInputWidgetState extends State<CommentInputWidget> {
                   final commentProvider = context.read<CommentProvider>();
                   final auth = context.read<AuthProvider>();
                   
+                  // Clear input immediately for reactivity
+                  _textController.clear();
+                  uploadProvider.clearSelection();
+
                   final uploadedImages = uploadProvider.tasks
                       .where((t) => t.status == UploadStatus.complete)
                       .map((t) => {'url': t.url!, 'storagePath': t.storagePath!})
@@ -487,7 +516,7 @@ class _CommentInputWidgetState extends State<CommentInputWidget> {
 
                   final profile = profileProvider.profile;
 
-                  final success = await commentProvider.createComment(
+                  await commentProvider.createComment(
                     widget.postId,
                     auth.user!.id,
                     content,
@@ -495,10 +524,6 @@ class _CommentInputWidgetState extends State<CommentInputWidget> {
                     userName: profile?.name,
                     userAvatar: profile?.avatarUrl,
                   );
-                  if (success) {
-                    _textController.clear();
-                    uploadProvider.clearSelection();
-                  }
                 },
                 icon: uploadProvider.isUploading 
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 

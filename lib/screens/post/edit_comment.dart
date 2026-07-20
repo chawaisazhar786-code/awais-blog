@@ -185,17 +185,17 @@ class _EditCommentState extends State<EditComment> {
                       .map((t) => {'url': t.url!, 'storagePath': t.storagePath!})
                       .toList();
 
-                  final success = await commentProvider.updateComment(
+                  // Close immediately for reactivity
+                  Navigator.pop(context);
+                  uploadProvider.clearSelection();
+
+                  await commentProvider.updateComment(
                     widget.comment.id,
                     widget.postId,
                     content,
                     uploadedImages: uploadedImages,
                     deleteImages: deleteImages,
                   );
-                  if (success && mounted) {
-                    uploadProvider.clearSelection();
-                    Navigator.pop(context);
-                  }
                 },
                 icon: uploadProvider.isUploading 
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))

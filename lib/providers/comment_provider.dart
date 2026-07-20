@@ -1,3 +1,4 @@
+import 'package:awais_blog/models/comment_image.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,6 +16,12 @@ class CommentProvider extends ChangeNotifier {
   List<Comment> get comments => _comments;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  void clearComments() {
+    _comments = [];
+    _error = null;
+    notifyListeners();
+  }
 
   Future<void> fetchComments(String postId) async {
     _isLoading = true;
@@ -49,9 +56,9 @@ class CommentProvider extends ChangeNotifier {
       userAvatar: userAvatar,
       images: uploadedImages?.map((img) => CommentImage(
         id: const Uuid().v4(),
-        comment_id: tempId,
-        image_url: img['url']!,
-        storage_path: img['storagePath']!,
+        commentId: tempId,
+        imageUrl: img['url']!,
+        storagePath: img['storagePath']!,
       )).toList() ?? [],
     );
 
@@ -94,8 +101,9 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
-      // Re-fetch to get final state (including any images added by storage repo)
-      await fetchComments(postId);
+      // Re-fetch to get final state is removed for reactivity, 
+      // but we might want to refresh in the background if needed.
+      // await fetchComments(postId); 
       return true;
     } catch (e) {
       _error = e.toString();
@@ -163,7 +171,7 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
-      await fetchComments(postId);
+      // await fetchComments(postId);
       return true;
     } catch (e) {
       _error = e.toString();
