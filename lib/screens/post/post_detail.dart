@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/comment_provider.dart';
 import '../../providers/upload_provider.dart';
 import '../../widgets/comment/comment_tile.dart';
+import '../../widgets/comment/comment_section.dart';
 import '../../core/widgets/loading_widget.dart';
 import '../../core/widgets/empty_widget.dart';
 import '../../core/widgets/image_fullscreen.dart';
@@ -38,16 +39,18 @@ class _PostDetailState extends State<PostDetail> {
     super.initState();
     _loadPost();
     final commentProvider = context.read<CommentProvider>();
-    commentProvider.clearComments(); // Clear stale comments
-    commentProvider.fetchComments(widget.postId);
-    
-    // Add listener for errors
     commentProvider.addListener(_onCommentError);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      commentProvider.clearComments();
+      commentProvider.fetchComments(widget.postId);
 
-    final auth = context.read<AuthProvider>();
-    if (auth.user != null) {
-      context.read<ProfileProvider>().loadProfile(auth.user!.id);
-    }
+      // ✅ Load profile safely after the build
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        context.read<ProfileProvider>().loadProfile(auth.user!.id);
+      }
+    });
   }
 
   void _onCommentError() {
@@ -104,7 +107,8 @@ class _PostDetailState extends State<PostDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final commentProvider = context.watch<CommentProvider>();
+    // Note: Removed context.watch<CommentProvider>() to prevent redundant full-page rebuilds.
+    // Reactivity for comments is now isolated in the CommentSection widget.
     final auth = context.watch<AuthProvider>();
     final theme = Theme.of(context);
 
@@ -259,62 +263,8 @@ class _PostDetailState extends State<PostDetail> {
                   ),
                   const Divider(),
 
-                  // Comments header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Text('Comments', style: theme.textTheme.titleMedium),
-                  ),
-
-                  // Comments list
-                  if (commentProvider.isLoading && commentProvider.comments.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else ...[
-                    ...commentProvider.comments.map((comment) => CommentTile(
-                      key: ValueKey(comment.id),
-                      comment: comment,
-                      isOwner: auth.user?.id == comment.userId,
-                      onEdit: () => showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => EditComment(comment: comment, postId: widget.postId),
-                      ),
-                      onDelete: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Delete Comment'),
-                            content: const Text('Are you sure?'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('Cancel')),
-                              TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Delete')),
-                            ],
-                          ),
-                        );
-                        if (confirm == true) {
-                          context.read<CommentProvider>().deleteComment(comment.id, widget.postId);
-                        }
-                      },
-                    )),
-
-                    if (commentProvider.comments.isEmpty && !commentProvider.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: EmptyWidget(message: 'No comments yet'),
-                      ),
-                    
-                    if (commentProvider.isLoading && commentProvider.comments.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Center(child: LinearProgressIndicator()),
-                      ),
-                  ],
+                  // Modularized Comment Section
+                  CommentSection(postId: widget.postId),
                 ],
               ),
             ),

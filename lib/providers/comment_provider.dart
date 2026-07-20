@@ -12,6 +12,7 @@ class CommentProvider extends ChangeNotifier {
   List<Comment> _comments = [];
   bool _isLoading = false;
   String? _error;
+  bool _isFetching = false; // Concurrency lock
 
   List<Comment> get comments => _comments;
   bool get isLoading => _isLoading;
@@ -19,20 +20,28 @@ class CommentProvider extends ChangeNotifier {
 
   void clearComments() {
     _comments = [];
+    _isLoading = false;
     _error = null;
     notifyListeners();
   }
 
   Future<void> fetchComments(String postId) async {
+    if (_isFetching) return;
+    _isFetching = true;
     _isLoading = true;
     notifyListeners();
+    debugPrint('CommentProvider: Fetching comments for $postId');
     try {
       _comments = await _commentRepository.fetchComments(postId);
+      debugPrint('CommentProvider: Fetched ${_comments.length} comments');
     } catch (e) {
+      debugPrint('CommentProvider: Error fetching comments: $e');
       _error = e.toString();
+    } finally {
+      _isLoading = false;
+      _isFetching = false;
+      notifyListeners();
     }
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<bool> createComment(
@@ -101,7 +110,8 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
-      // Refresh from server to get correct IDs and profile data
+      // Small delay to allow Supabase database to index the new comment
+      await Future.delayed(const Duration(milliseconds: 800));
       await fetchComments(postId);
       return true;
     } catch (e) {
@@ -173,7 +183,8 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
-      // Refresh from server
+      // Small delay to allow Supabase database to index the changes
+      await Future.delayed(const Duration(milliseconds: 800));
       await fetchComments(postId);
       return true;
     } catch (e) {
