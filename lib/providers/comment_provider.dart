@@ -101,6 +101,8 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
+      // Refresh from server to get correct IDs and profile data
+      await fetchComments(postId);
       return true;
     } catch (e) {
       _error = e.toString();
@@ -171,6 +173,8 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
+      // Refresh from server
+      await fetchComments(postId);
       return true;
     } catch (e) {
       _error = e.toString();
@@ -195,6 +199,8 @@ class CommentProvider extends ChangeNotifier {
         await _commentRepository.deleteCommentImage(img.id);
       }
       await _commentRepository.deleteComment(commentId);
+      // Optional: final refresh to be sure
+      // await fetchComments(postId); 
       return true;
     } catch (e) {
       _error = e.toString();

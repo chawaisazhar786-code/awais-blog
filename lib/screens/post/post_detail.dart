@@ -261,47 +261,60 @@ class _PostDetailState extends State<PostDetail> {
 
                   // Comments header
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Text('Comments', style: theme.textTheme.titleMedium),
                   ),
 
                   // Comments list
-                  ...commentProvider.comments.map((comment) => CommentTile(
-                    key: ValueKey(comment.id),
-                    comment: comment,
-                    isOwner: auth.user?.id == comment.userId,
-                    onEdit: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => EditComment(comment: comment, postId: widget.postId),
-                    ),
-                    onDelete: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete Comment'),
-                          content: const Text('Are you sure?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel')),
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('Delete')),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        context.read<CommentProvider>().deleteComment(comment.id, widget.postId);
-                      }
-                    },
-                  )),
-
-                  if (commentProvider.comments.isEmpty)
+                  if (commentProvider.isLoading && commentProvider.comments.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: EmptyWidget(message: 'No comments yet'),
-                    ),
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else ...[
+                    ...commentProvider.comments.map((comment) => CommentTile(
+                      key: ValueKey(comment.id),
+                      comment: comment,
+                      isOwner: auth.user?.id == comment.userId,
+                      onEdit: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => EditComment(comment: comment, postId: widget.postId),
+                      ),
+                      onDelete: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Delete Comment'),
+                            content: const Text('Are you sure?'),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel')),
+                              TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Delete')),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          context.read<CommentProvider>().deleteComment(comment.id, widget.postId);
+                        }
+                      },
+                    )),
+
+                    if (commentProvider.comments.isEmpty && !commentProvider.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: EmptyWidget(message: 'No comments yet'),
+                      ),
+                    
+                    if (commentProvider.isLoading && commentProvider.comments.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(child: LinearProgressIndicator()),
+                      ),
+                  ],
                 ],
               ),
             ),
