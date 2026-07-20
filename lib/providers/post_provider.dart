@@ -29,7 +29,7 @@ class PostProvider extends ChangeNotifier {
     if (refresh) {
       _offset = 0;
       _hasMore = true;
-      _posts.clear();
+      _posts = [];
       _error = null;
     }
     if (_isLoadingMore || !_hasMore) return;
@@ -44,7 +44,7 @@ class PostProvider extends ChangeNotifier {
         search: _searchQuery,
       );
       if (newPosts.length < 10) _hasMore = false;
-      _posts.addAll(newPosts);
+      _posts = [..._posts, ...newPosts];
       _offset += newPosts.length;
       _error = null;
     } catch (e) {
@@ -170,7 +170,7 @@ class PostProvider extends ChangeNotifier {
         await _postRepository.deletePostImage(img.id);
       }
       await _postRepository.deletePost(postId);
-      _posts.removeWhere((p) => p.id == postId);
+      _posts = _posts.where((p) => p.id != postId).toList();
       notifyListeners();
       return true;
     } catch (e) {

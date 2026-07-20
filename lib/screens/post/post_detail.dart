@@ -267,6 +267,7 @@ class _PostDetailState extends State<PostDetail> {
 
                   // Comments list
                   ...commentProvider.comments.map((comment) => CommentTile(
+                    key: ValueKey(comment.id),
                     comment: comment,
                     isOwner: auth.user?.id == comment.userId,
                     onEdit: () => showModalBottomSheet(

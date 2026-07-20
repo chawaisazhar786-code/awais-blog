@@ -63,7 +63,7 @@ class CommentProvider extends ChangeNotifier {
     );
 
     // Optimistic update
-    _comments.add(tempComment);
+    _comments = [..._comments, tempComment];
     notifyListeners();
 
     try {
@@ -101,14 +101,11 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
-      // Re-fetch to get final state is removed for reactivity, 
-      // but we might want to refresh in the background if needed.
-      // await fetchComments(postId); 
       return true;
     } catch (e) {
       _error = e.toString();
       // Revert optimistic update
-      _comments.removeWhere((c) => c.id == tempId);
+      _comments = _comments.where((c) => c.id != tempId).toList();
       notifyListeners();
       return false;
     }
@@ -126,10 +123,13 @@ class CommentProvider extends ChangeNotifier {
     final index = _comments.indexWhere((c) => c.id == commentId);
     
     if (index != -1) {
-      _comments[index] = _comments[index].copyWith(
-        content: content,
-        updatedAt: DateTime.now(),
-      );
+      _comments = [
+        for (var c in _comments)
+          if (c.id == commentId)
+            c.copyWith(content: content, updatedAt: DateTime.now())
+          else
+            c
+      ];
       notifyListeners();
     }
 
@@ -171,7 +171,6 @@ class CommentProvider extends ChangeNotifier {
         }
       }
 
-      // await fetchComments(postId);
       return true;
     } catch (e) {
       _error = e.toString();
@@ -187,7 +186,7 @@ class CommentProvider extends ChangeNotifier {
     final commentToDelete = _comments.firstWhere((c) => c.id == commentId);
 
     // Optimistic delete
-    _comments.removeWhere((c) => c.id == commentId);
+    _comments = _comments.where((c) => c.id != commentId).toList();
     notifyListeners();
 
     try {
