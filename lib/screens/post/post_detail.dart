@@ -469,14 +469,14 @@ class _CommentInputWidgetState extends State<CommentInputWidget> {
                   final commentProvider = context.read<CommentProvider>();
                   final auth = context.read<AuthProvider>();
                   
-                  // Clear input immediately for reactivity
-                  _textController.clear();
-                  uploadProvider.clearSelection();
-
                   final uploadedImages = uploadProvider.tasks
                       .where((t) => t.status == UploadStatus.complete)
                       .map((t) => {'url': t.url!, 'storagePath': t.storagePath!})
                       .toList();
+
+                  // Clear input immediately for reactivity
+                  _textController.clear();
+                  uploadProvider.clearSelection();
 
                   final profile = profileProvider.profile;
 
